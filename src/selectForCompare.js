@@ -1,43 +1,61 @@
 // import React, { useContext} from 'react';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import FilteredList from "./components/filteredList";
+import { characterIdArr } from "./stores/character";
+import classNames from "classnames";
 
-function SelectForCompare({ characterIdArray }) {
+function SelectForCompare() {
 
     const [error, setError] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [users, setUsers] = useState([]);
+    const [apiResult, setApiResult] = useState(null);
+    const [filteredResults, setFilteredResults] = useState([]);
+    const characterIdArray = useSelector(state => state.character)
+    const listRef = useRef()
+
     useEffect(() => {
         const fetchUser = () =>
             fetch(`https://rickandmortyapi.com/api/character/`)
                 .then(response => response.json())
                 .then(users => {
                     setIsLoaded(true);
-                    getUserInfo(users.results);
-                    setUsers(characterIdArray.results);
-                    
+                    setApiResult(users)
                 },
                     (error) => {
                         setIsLoaded(true);
                         setError(error);
                     });
-        fetchUser();
+
+        fetchUser()
     }, [])
 
-    const getUserInfo = (results) => {
-        results.forEach(result => {
-            if (characterIdArray?.length > 2) {
-                characterIdArray.forEach(id => {
+
+    useEffect(() => {
+        const getUserInfo = (results) => {
+            const newFilteredResults = []
+            results.filter((result) => {
+                characterIdArray.map((id) => {
                     if (result.id === id) {
-                        setUsers(users.results);
+                        newFilteredResults.push(result);
                     }
                 })
+            })
+            if (newFilteredResults.length >= 2) {
+                setFilteredResults(newFilteredResults);
+                listRef.current.classList.remove('hidden');
+            } else {
+                listRef.current.classList.add('hidden');
             }
-        });
-    }
+        }
+        if (apiResult !== null) {
+            getUserInfo(apiResult.results)
+        }
+    }, [characterIdArray]);
 
     return (
-        <div id="compare_result" className="">
+        <div ref={listRef} id="compare_result" className="hidden">
             <table>
                 <thead>
                     <tr>
@@ -62,7 +80,7 @@ function SelectForCompare({ characterIdArray }) {
                     </tr>
                 </thead>
                 <tbody id="compare_result_body">
-                    {users.map((user, index) => (
+                    {filteredResults.map((user, index) => (
                         <FilteredList key={index} user={user} />
                     ))}
                 </tbody>
